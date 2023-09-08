@@ -9,7 +9,7 @@ The resistance in 25°C is 10K (+- 1%). The resistance goes down as it gets warm
 
 # Raw Code for B3950 for Arduino
 
-B3950_Raw.ino file contains the raw code to measure resistance (kOhm), temperature (celcius and fahrenheit) as per the datasheet provided by Adafruit as mentioned in the temperature-to-resistance lookup table https://cdn-shop.adafruit.com/datasheets/103_3950_lookuptable.pdf
+**B3950_Raw.ino** file contains the raw code to measure resistance (kOhm), temperature (celcius and fahrenheit) as per the datasheet provided by Adafruit as mentioned in the temperature-to-resistance lookup table https://cdn-shop.adafruit.com/datasheets/103_3950_lookuptable.pdf
 
 # Arduino Library for B3950
 
@@ -18,3 +18,8 @@ B3950_Raw.ino file contains the raw code to measure resistance (kOhm), temperatu
   * B3950Thermistor.cpp
   * B3950Example Directory
       * B3950Example.ino
+
+
+# Thermistor Comaparison
+
+**ThermistorComparison.ino** presents the thermistor comparison code between generic 10K NTC and B3950 10K NTC thermistors.
