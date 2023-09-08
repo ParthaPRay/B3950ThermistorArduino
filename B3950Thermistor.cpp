@@ -1,9 +1,7 @@
 #include "B3950Thermistor.h"
 
-const int numDataPoints = 241;
-const float SeriesResistor = 10000.0;  // resistance of series resistor in ohms
-const float Vcc = 5.0;  // supply voltage
-float temperatureValues[numDataPoints] = {
+const float B3950Thermistor::temperatureValues[B3950Thermistor::numDataPoints] = 
+  {   
     -40, -39, -38, -37, -36, -35, -34, -33, -32, -31, 
     -30, -29, -28, -27, -26, -25, -24, -23, -22, -21, 
     -20, -19, -18, -17, -16, -15, -14, -13, -12, -11, 
@@ -28,9 +26,11 @@ float temperatureValues[numDataPoints] = {
     170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 
     180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 
     190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200
-};
-
-float resistanceValues[numDataPoints] = {
+    
+    };
+    
+const float B3950Thermistor::resistanceValues[B3950Thermistor::numDataPoints] = 
+{ 
     277.2, 263.6, 250.1, 236.8, 224.0, 211.5, 199.6, 188.1, 177.3, 167.0, 
     157.2, 148.1, 139.4, 131.3, 123.7, 116.6, 110.0, 103.7, 97.9,  92.50, 
     87.43, 82.79, 78.44, 74.36, 70.53, 66.92, 63.54, 60.34, 57.33, 54.50, 
@@ -55,37 +55,45 @@ float resistanceValues[numDataPoints] = {
     0.1139, 0.1115, 0.1092, 0.1070, 0.1048, 0.1027, 0.1006, 0.0986, 0.0966, 0.0947, 
     0.0928, 0.0909, 0.0891, 0.0873, 0.0856, 0.0839, 0.0822, 0.0806, 0.0790, 0.0774, 
     0.0759, 0.0743, 0.0729, 0.0714, 0.0700, 0.0686, 0.0672, 0.0658, 0.0645, 0.0631, 0.0619
+
 };
 
-B3950Thermistor::B3950Thermistor(int pin) {
-    _pin = pin;
-    pinMode(_pin, INPUT);
+B3950Thermistor::B3950Thermistor(int pin, float seriesResistor, float vcc) : _pin(pin), _seriesResistor(seriesResistor), _vcc(vcc) {}
+
+float B3950Thermistor::readResistanceKOhms() {
+    int adcValue = analogRead(_pin);
+    return readThermistorResistance(adcValue);
 }
 
-float B3950Thermistor::getResistanceKOhms() {
-    int rawADC = analogRead(_pin);
-    float Vout = (rawADC * Vcc) / 1023.0;
-    float Rthermistor = SeriesResistor / ((Vcc / Vout) - 1);
-    return Rthermistor / 1000;
+float B3950Thermistor::readTemperatureCelsius() {
+    float resistance = readResistanceKOhms();
+    return interpolateTemperature(resistance);
 }
 
-float B3950Thermistor::getTemperatureC() {
-    float R = getResistanceKOhms();
-    return calculateTemperature(R);
+float B3950Thermistor::readTemperatureFahrenheit() {
+    float temperatureCelsius = readTemperatureCelsius();
+    return temperatureCelsius * 9.0/5.0 + 32.0;  // Convert Celsius to Fahrenheit
 }
 
-float B3950Thermistor::getTemperatureF() {
-    float tempC = getTemperatureC();
-    return (tempC * 1.8) + 32;  // Convert Celsius to Fahrenheit
+float B3950Thermistor::readThermistorResistance(int adcValue) {
+    float voltage = adcValue * (_vcc / 1023.0);
+    float thermistorResistance = _seriesResistor * (_vcc / voltage - 1.0);
+    return thermistorResistance / 1000;   // Convert the resistor into kOhms
 }
 
-float B3950Thermistor::calculateTemperature(float R) {
+float B3950Thermistor::interpolateTemperature(float resistance) {
+    // If resistance is outside the range, return either minimum or maximum temperature
+    if (resistance >= resistanceValues[0]) return temperatureValues[0];
+    if (resistance <= resistanceValues[numDataPoints - 1]) return temperatureValues[numDataPoints - 1];
+
+    // Find the two data points for interpolation
     for (int i = 0; i < numDataPoints - 1; i++) {
-        if (R <= resistanceValues[i] && R >= resistanceValues[i + 1]) {
-            float fraction = (R - resistanceValues[i]) / (resistanceValues[i + 1] - resistanceValues[i]);
-            return temperatureValues[i] + fraction * (temperatureValues[i + 1] - temperatureValues[i]);
+        if (resistance <= resistanceValues[i] && resistance >= resistanceValues[i + 1]) {
+            // Linear interpolation formula: 
+            // y = y0 + (x - x0) * (y1 - y0) / (x1 - x0)
+            return temperatureValues[i] + (resistance - resistanceValues[i]) * (temperatureValues[i + 1] - temperatureValues[i]) / (resistanceValues[i + 1] - resistanceValues[i]);
         }
     }
-    return NAN;
+    return 0.0; // Should not reach here
 }
 
