@@ -70,42 +70,55 @@ const float Vcc = 5.0;  // supply voltage
 
 
 
-
+const int analogPin = A0;
+const float referenceResistance = 10000.0; // 10K resistor
 
 void setup() {
   Serial.begin(9600);
+  delay(1000);
 }
 
 void loop() {
-
-  //Calculation for B3950 NTC 10K
-  int rawADC = analogRead(B3950Thermistor);
-  float Vout = (rawADC * Vcc) / 1023.0;
-  float Rthermistor = SeriesResistor / ((Vcc / Vout) - 1); // calculate resistance of thermistor
-  float Rkthermistor = Rthermistor/1000; // calculate KOhm resistance
-  float temperatureC = getTemperature(Rkthermistor);
-  float temperatureF = (temperatureC * 9.0)/ 5.0 + 32.0; 
- 
- // B3950 Thermistor
+  int adcValue = analogRead(analogPin);
+  float resistance = readThermistorResistance(adcValue);
+   
+//  Print ADC and resistance for debugging
+  Serial.print("ADC Value: ");
+  Serial.print(adcValue);
+  Serial.print("\tCalculated Resistance: ");
+  Serial.print(resistance);
   
-  Serial.print("Resistance: ");
-  Serial.print(Rkthermistor);
-  Serial.print(" Kohms, Temperature: ");
-  Serial.print(temperatureC);
-  Serial.print(" C, Temperature: ");
-  Serial.print(temperatureF);
-  Serial.println(" F");
-  
-  delay(1000);  // delay for 1 second
+  float temperature = interpolateTemperature(resistance);
+  Serial.print("\tTemperature: ");
+  Serial.println(temperature);
+  delay(500);
 }
 
-float getTemperature(float R) {
+ 
+ float readThermistorResistance(int adcValue)
+ {
+  
+  float voltage = adcValue * (5.0 / 1023.0);
+  float thermistorResistance = referenceResistance * (5.0 / voltage - 1.0);
+  return thermistorResistance/1000;   //Convert the resistor into kOhms
+ 
+  }
+
+
+float interpolateTemperature(float resistance) 
+{
+  // If resistance is outside the range, return either minimum or maximum temperature
+  if (resistance >= resistanceValues[0]) return temperatureValues[0];
+  if (resistance <= resistanceValues[numDataPoints - 1]) return temperatureValues[numDataPoints - 1];
+
+  // Find the two data points for interpolation
   for (int i = 0; i < numDataPoints - 1; i++) {
-    if (R <= resistanceValues[i] && R >= resistanceValues[i + 1]) {
-      // linear interpolation
-      float fraction = (R - resistanceValues[i]) / (resistanceValues[i + 1] - resistanceValues[i]);
-      return temperatureValues[i] + fraction * (temperatureValues[i + 1] - temperatureValues[i]);
+    if (resistance <= resistanceValues[i] && resistance >= resistanceValues[i + 1]) {
+      // Linear interpolation formula: 
+      // y = y0 + (x - x0) * (y1 - y0) / (x1 - x0)
+      return temperatureValues[i] + (resistance - resistanceValues[i]) * (temperatureValues[i + 1] - temperatureValues[i]) / (resistanceValues[i + 1] - resistanceValues[i]);
     }
   }
-  return NAN;  // return not-a-number if resistance is out of range
-}
+  return 0.0; // Should not reach here
+ }
+ 
