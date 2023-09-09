@@ -1,3 +1,5 @@
+// Use wither 2D lookup array or 1D lookup array. The first value is temperature in degree celcius and second value is resistance in KOhms.
+
 // Define the lookup table
 const DataPoint lookupTable[] = {
   {-40, 277.2}, {-39, 263.6}, {-38, 250.1}, {-37, 236.8}, {-36, 224.0}, 
